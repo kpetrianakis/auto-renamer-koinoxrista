@@ -29,3 +29,20 @@ def test_once_renames_and_writes_log(tmp_path, fixtures_dir):
     assert [p.name for p in power.iterdir()] == ["NRG revma 2026.10.09 66kwh euro 82.12.pdf"]
     log_text = (tmp_path / "auto-renamer.log").read_text(encoding="utf-8")
     assert "x.pdf → NRG revma" in log_text
+
+
+def test_watcher_crash_is_retried(tmp_path, monkeypatch):
+    import renamer.__main__ as main_mod
+
+    calls = []
+
+    def fake_run_watcher(scanner, **kw):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("observer died")
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(main_mod, "run_watcher", fake_run_watcher)
+    monkeypatch.setattr(main_mod.time, "sleep", lambda s: None)
+    assert main(["--root", str(tmp_path)]) == 0
+    assert len(calls) == 2

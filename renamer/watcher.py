@@ -37,7 +37,7 @@ def run_watcher(scanner: Scanner, *, rescan_seconds: float, stop: threading.Even
         observer.schedule(_Handler(events), str(directory), recursive=False)
     observer.start()
     try:
-        scanner.scan_all()
+        _safe(scanner.scan_all)
         pending: set[Path] = set()
         next_rescan = time.monotonic() + rescan_seconds
         while not stop.is_set():

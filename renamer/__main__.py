@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -29,13 +30,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     log.info("Εκκίνηση watcher: %s", args.root)
-    try:
-        run_watcher(scanner, rescan_seconds=config.RESCAN_SECONDS)
-    except KeyboardInterrupt:
-        pass
-    except Exception:
-        log.exception("Ο watcher σταμάτησε απρόσμενα")
-        return 1  # μη μηδενικός κωδικός -> ο Task Scheduler τον ξαναξεκινά
+    while True:
+        try:
+            run_watcher(scanner, rescan_seconds=config.RESCAN_SECONDS)
+            break
+        except KeyboardInterrupt:
+            break
+        except Exception:
+            # ο Task Scheduler ξαναξεκινά μόνο αν αποτύχει η εκκίνηση, όχι σε crash
+            log.exception("Ο watcher σταμάτησε απρόσμενα· επανεκκίνηση σε 60 δευτερόλεπτα")
+            time.sleep(60)
     log.info("Τερματισμός watcher")
     return 0
 

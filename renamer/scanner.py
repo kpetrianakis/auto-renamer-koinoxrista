@@ -23,8 +23,9 @@ class Scanner:
         self.dirs = dirs
         self.dry_run = dry_run
         self.settle_seconds = settle_seconds
-        self._final: dict[Path, float] = {}
-        self._locked: dict[Path, float] = {}
+        # κλειδί (mtime, size): αντιγραφές κρατούν το παλιό mtime ενώ το αρχείο μεγαλώνει
+        self._final: dict[Path, tuple[float, int]] = {}
+        self._locked: dict[Path, tuple[float, int]] = {}
 
     def scan_all(self) -> list[Result]:
         results = []
@@ -43,19 +44,23 @@ class Scanner:
         if path.suffix.lower() != ".pdf" or is_processed(path.name):
             return None
         try:
-            mtime = path.stat().st_mtime
+            stat = path.stat()
         except FileNotFoundError:
             return None
-        if self._final.get(path) == mtime:
+        version = (stat.st_mtime, stat.st_size)
+        if self._final.get(path) == version:
             return None
 
-        result = process_file(path, dry_run=self.dry_run)
+        try:
+            result = process_file(path, dry_run=self.dry_run)
+        except Exception as exc:  # ένα «περίεργο» αρχείο δεν σταματά τη σάρωση των υπολοίπων
+            result = Result("error", path, message=f"απρόσμενο σφάλμα: {exc!r}")
         if result.status in FINAL:
-            self._final[path] = mtime
+            self._final[path] = version
         if result.status == "locked":
-            if self._locked.get(path) == mtime:
+            if self._locked.get(path) == version:
                 return result  # ήδη καταγραμμένο· απλώς ξαναδοκιμάζουμε σιωπηλά
-            self._locked[path] = mtime
+            self._locked[path] = version
         _log(result)
         return result
 

@@ -50,3 +50,18 @@ def test_initial_scan_picks_up_existing_files(fixtures_dir, tmp_path):
     finally:
         stop.set()
         thread.join(timeout=10)
+
+
+def test_initial_scan_crash_does_not_stop_watcher(tmp_path, monkeypatch):
+    power = tmp_path / "Λογαριασμοι Ρευματος"
+    power.mkdir()
+    scanner = Scanner([power], settle_seconds=0.5)
+    monkeypatch.setattr(scanner, "scan_all", lambda: (_ for _ in ()).throw(ValueError("boom")))
+    stop = threading.Event()
+    thread = threading.Thread(target=run_watcher, args=(scanner,), kwargs=dict(rescan_seconds=600, stop=stop))
+    thread.start()
+    time.sleep(1.5)
+    alive = thread.is_alive()
+    stop.set()
+    thread.join(timeout=10)
+    assert alive

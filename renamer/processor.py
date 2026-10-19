@@ -39,7 +39,10 @@ def process_file(path: Path, *, dry_run: bool = False) -> Result:
     if expected_kind and expected_kind != bill.kind:
         message = f"λογαριασμός «{bill.kind}» στον φάκελο «{path.parent.name}»"
 
-    target = unique_path(path.parent, bill_filename(bill))
+    filename = bill_filename(bill)
+    if not is_processed(filename):  # αλλιώς ο watcher θα το ξαναμετονόμαζε επ' άπειρον
+        return Result("error", path, message=f"μη έγκυρο όνομα: {filename}")
+    target = unique_path(path.parent, filename)
     if dry_run:
         return Result("would_rename", path, target, message)
     try:

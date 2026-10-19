@@ -75,3 +75,20 @@ def test_wrong_folder_renamed_with_warning(fixtures_dir, power_dir):
     assert result.target.parent == power_dir
     assert result.target.name == "NRG gas 2026.09.15 0kwh euro 17.34.pdf"
     assert "gas" in result.message
+
+
+def test_name_that_would_not_be_recognised_is_refused(fixtures_dir, power_dir, monkeypatch):
+    # π.χ. αρνητικά kWh: το όνομα δεν θα αναγνωριζόταν ως επεξεργασμένο -> ατέρμονες μετονομασίες
+    from datetime import date
+    from decimal import Decimal
+
+    import renamer.processor as processor_mod
+    from renamer.model import Bill
+
+    monkeypatch.setattr(
+        processor_mod, "parse_bill", lambda text: Bill("NRG", "gas", date(2026, 9, 15), -120, Decimal("1"))
+    )
+    src = put(fixtures_dir, "gas_settlement_zero.pdf", power_dir, "x.pdf")
+    result = process_file(src)
+    assert result.status == "error"
+    assert [p.name for p in power_dir.iterdir()] == ["x.pdf"]

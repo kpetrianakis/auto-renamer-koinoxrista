@@ -6,6 +6,7 @@ import time
 import pytest
 
 import renamer.scanner as scanner_mod
+from renamer.processor import Result
 from renamer.scanner import Scanner, is_settled
 
 
@@ -90,3 +91,48 @@ def test_is_settled(tmp_path):
     age(f)
     assert is_settled(f, 5)
     assert not is_settled(tmp_path / "missing.pdf", 5)
+
+
+def test_unexpected_exception_is_isolated_and_final(fixtures_dir, dirs, monkeypatch, caplog):
+    gas, power = dirs
+    age(shutil.copy(fixtures_dir / "gas_estimate.pdf", gas / "bad.pdf"))
+    age(shutil.copy(fixtures_dir / "power_2026_10.pdf", power / "good.pdf"))
+    real = scanner_mod.process_file
+
+    def flaky(path, **kw):
+        if path.name == "bad.pdf":
+            raise ValueError("boom")
+        return real(path, **kw)
+
+    monkeypatch.setattr(scanner_mod, "process_file", flaky)
+    s = Scanner(list(dirs), settle_seconds=5)
+    with caplog.at_level(logging.INFO, logger="renamer"):
+        results = s.scan_all()
+        s.scan_all()
+    assert sorted(r.status for r in results) == ["error", "renamed"]
+    assert sum("bad.pdf" in r.getMessage() for r in caplog.records) == 1
+
+
+def test_final_result_retried_when_size_changes_with_same_mtime(fixtures_dir, dirs, monkeypatch):
+    # αντιγραφή που διατηρεί το παλιό mtime ενώ το αρχείο γράφεται ακόμα
+    _, power = dirs
+    src = power / "copying.pdf"
+    data = (fixtures_dir / "power_2026_10.pdf").read_bytes()
+    src.write_bytes(data[: len(data) // 2])
+    age(src)
+    mtime = src.stat().st_mtime
+    calls = []
+    real = scanner_mod.process_file
+
+    def first_read_is_partial(path, **kw):  # 1η ανάγνωση: λείπουν πεδία -> οριστικό σφάλμα
+        calls.append(path)
+        return Result("error", path, message="δεν βρέθηκε: kWh") if len(calls) == 1 else real(path, **kw)
+
+    monkeypatch.setattr(scanner_mod, "process_file", first_read_is_partial)
+    s = Scanner(list(dirs), settle_seconds=5)
+    s.scan_all()
+    src.write_bytes(data)
+    os.utime(src, (mtime, mtime))
+    s.scan_all()
+    assert len(calls) == 2
+    assert (power / "NRG revma 2026.10.09 66kwh euro 82.12.pdf").exists()
