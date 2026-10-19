@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import sys
 import time
 from logging.handlers import RotatingFileHandler
@@ -16,8 +17,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="renamer", description="Μετονομασία λογαριασμών ρεύματος/αερίου")
     parser.add_argument("--once", action="store_true", help="μία σάρωση και έξοδος")
     parser.add_argument("--dry-run", action="store_true", help="μόνο εμφάνιση, χωρίς αλλαγές (υπονοεί --once)")
-    parser.add_argument("--root", type=Path, default=config.DEFAULT_ROOT)
+    parser.add_argument("--root", type=Path, default=os.environ.get(config.ROOT_ENV),
+                        help=f"φάκελος κοινοχρήστων (default: ${config.ROOT_ENV})")
     args = parser.parse_args(argv)
+    if args.root is None:
+        parser.error(f"δώσε --root ή όρισε τη μεταβλητή {config.ROOT_ENV}")
 
     _setup_logging(None if args.dry_run else args.root / config.LOG_NAME)
     scanner = Scanner(

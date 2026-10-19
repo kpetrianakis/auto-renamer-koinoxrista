@@ -1,9 +1,11 @@
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
 from renamer.model import Bill
+from renamer.naming import bill_filename
 from renamer.parsers import ParseError, parse_bill
 from renamer.parsers.common import gr_number
 from renamer.pdftext import extract_text
@@ -45,3 +47,12 @@ def test_negative_total():
 def test_gr_number():
     assert gr_number("10.954,82") == Decimal("10954.82")
     assert gr_number("-1,03") == Decimal("-1.03")
+
+
+PRIVATE = Path(__file__).parent / "fixtures" / "private"
+
+
+@pytest.mark.parametrize("pdf", sorted(PRIVATE.glob("*.pdf")), ids=lambda p: p.name)
+def test_private_real_bills(pdf):
+    """Πραγματικοί λογαριασμοί, μόνο τοπικά (gitignored), με το σωστό όνομα ως αναμενόμενη τιμή."""
+    assert bill_filename(parse_bill(extract_text(pdf))) == pdf.name

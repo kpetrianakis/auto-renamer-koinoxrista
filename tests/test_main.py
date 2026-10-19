@@ -2,6 +2,8 @@ import os
 import shutil
 import time
 
+import pytest
+
 from renamer.__main__ import main
 
 
@@ -46,3 +48,18 @@ def test_watcher_crash_is_retried(tmp_path, monkeypatch):
     monkeypatch.setattr(main_mod.time, "sleep", lambda s: None)
     assert main(["--root", str(tmp_path)]) == 0
     assert len(calls) == 2
+
+
+def test_root_from_environment(tmp_path, fixtures_dir, monkeypatch, capsys):
+    make_root(tmp_path, fixtures_dir)
+    monkeypatch.setenv("KOINOXRISTA_ROOT", str(tmp_path))
+    assert main(["--dry-run"]) == 0
+    assert "x.pdf → NRG revma" in capsys.readouterr().err
+
+
+def test_missing_root_is_an_error(monkeypatch, capsys):
+    monkeypatch.delenv("KOINOXRISTA_ROOT", raising=False)
+    with pytest.raises(SystemExit) as exc:
+        main(["--dry-run"])
+    assert exc.value.code == 2
+    assert "KOINOXRISTA_ROOT" in capsys.readouterr().err

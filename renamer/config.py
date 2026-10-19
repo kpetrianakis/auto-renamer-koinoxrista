@@ -1,6 +1,5 @@
-from pathlib import Path
-
-DEFAULT_ROOT = Path(r"C:\Users\me\OneDrive\Κοινόχρηστα")
+# Ο φάκελος των κοινοχρήστων: --root ή αυτή η μεταβλητή περιβάλλοντος
+ROOT_ENV = "KOINOXRISTA_ROOT"
 
 # Φάκελος -> τύπος λογαριασμού που περιμένουμε να περιέχει
 FOLDER_KINDS = {
