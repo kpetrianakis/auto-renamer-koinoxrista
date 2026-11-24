@@ -33,9 +33,30 @@ def test_unknown_provider_is_not_recognised():
     assert parse_bill("ΔΕΗ\nΛογαριασμός Φυσικού Αερίου\n20/11/2026\n") is None
 
 
-def test_recognised_bill_with_missing_field_raises():
-    with pytest.raises(ParseError, match="σύνολο"):
-        parse_bill("nrg adapt GAS\nΈναντι Λογαριασμός Φυσικού Αερίου\n20/11/2026\nkWh\n0,00\n")
+def test_missing_field_is_left_empty():
+    bill = parse_bill("nrg adapt GAS\nΈναντι Λογαριασμός Φυσικού Αερίου\n20/11/2026\nkWh\n0,00\n")
+    assert bill == Bill("NRG", "gas", date(2026, 11, 20), 0, None)
+    assert bill.missing() == ["σύνολο λογαριασμού"]
+
+
+def test_only_amount_found():
+    bill = parse_bill("nrg\nΛογαριασμός Χαμηλής Τάσης-Ηλεκτρικής Ενέργειας\nΣΥΝΟΛΟ ΛΟΓΑΡΙΑΣΜΟΥ: 5,00€\n")
+    assert bill == Bill("NRG", "revma", None, None, Decimal("5.00"))
+
+
+def test_recognised_bill_with_no_fields_raises():
+    with pytest.raises(ParseError, match="κανένα"):
+        parse_bill("nrg adapt GAS\nΈναντι Λογαριασμός Φυσικού Αερίου\n")
+
+
+def test_negative_gas_total_without_euro_sign():
+    # «Τελικός Εκκαθαριστικός»: επιστροφή εγγύησης, το σύνολο γράφεται χωρίς €
+    text = (
+        "nrg adapt GAS\nΤελικός Εκκαθαριστικός Λογαριασμός Φυσικού Αερίου\n23/11/2026\n0,00€\n"
+        "kWh\n34,70\nΕγγύηση \n-250,00€\nΣύνολο Τρέχοντος Λογαριασμού \n-208,37\n"
+        "Προηγούμενο Υπόλοιπο\n 0,00€\n"
+    )
+    assert parse_bill(text) == Bill("NRG", "gas", date(2026, 11, 23), 35, Decimal("-208.37"))
 
 
 def test_negative_total():

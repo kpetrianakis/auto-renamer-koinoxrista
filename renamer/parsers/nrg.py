@@ -4,9 +4,12 @@ from decimal import Decimal
 from ..model import Bill
 from .common import NUMBER, ParseError, find, gr_date, gr_number, round_kwh
 
-GAS_TITLE = "Λογαριασμός Φυσικού Αερίου"  # «Εκκαθαριστικός» και «Έναντι»
+GAS_TITLE = "Λογαριασμός Φυσικού Αερίου"  # «Εκκαθαριστικός», «Τελικός Εκκαθαριστικός» και «Έναντι»
 POWER_TITLE = "Λογαριασμός Χαμηλής Τάσης-Ηλεκτρικής Ενέργειας"
 ISSUE_DATE = r"^(\d{2}/\d{2}/\d{4})$"  # η πρώτη «σκέτη» ημερομηνία είναι η έκδοση
+# Το € δεν μπαίνει πάντα: ο «Τελικός Εκκαθαριστικός» γράφει σκέτο «-208,37»
+GAS_TOTAL = rf"Σύνολο Τρέχοντος Λογαριασμού\s*({NUMBER})\s*€?"
+POWER_TOTAL = rf"ΣΥΝΟΛΟ ΛΟΓΑΡΙΑΣΜΟΥ:\s*({NUMBER})\s*€?"
 
 
 def matches(text: str) -> bool:
@@ -14,16 +17,25 @@ def matches(text: str) -> bool:
 
 
 def parse(text: str) -> Bill:
-    issue_date = gr_date(find(ISSUE_DATE, text, "ημερομηνία έκδοσης"))
+    issue_date = find(ISSUE_DATE, text)
     if GAS_TITLE in text:
         kind = "gas"
-        kwh = gr_number(find(rf"^kWh\n({NUMBER})$", text, "kWh"))
-        amount = find(rf"Σύνολο Τρέχοντος Λογαριασμού\s*({NUMBER})€", text, "σύνολο λογαριασμού")
+        kwh = find(rf"^kWh\n({NUMBER})$", text)
+        kwh = gr_number(kwh) if kwh is not None else None
+        amount = find(GAS_TOTAL, text)
     else:
         kind = "revma"
         charges = re.findall(r"Χρέωση [^:\n]*Ενέργειας: (\d+)kWhX", text)
-        if not charges:
-            raise ParseError("δεν βρέθηκε: kWh")
-        kwh = sum(Decimal(c) for c in charges)
-        amount = find(rf"ΣΥΝΟΛΟ ΛΟΓΑΡΙΑΣΜΟΥ:\s*({NUMBER})€", text, "σύνολο λογαριασμού")
-    return Bill("NRG", kind, issue_date, round_kwh(kwh), gr_number(amount))
+        kwh = sum(Decimal(c) for c in charges) if charges else None
+        amount = find(POWER_TOTAL, text)
+
+    bill = Bill(
+        "NRG",
+        kind,
+        gr_date(issue_date) if issue_date is not None else None,
+        round_kwh(kwh) if kwh is not None else None,
+        gr_number(amount) if amount is not None else None,
+    )
+    if len(bill.missing()) == 3:  # τίποτα χρήσιμο για το όνομα: καλύτερα να μείνει ως έχει
+        raise ParseError("δεν βρέθηκε κανένα πεδίο (ημερομηνία, kWh, σύνολο)")
+    return bill

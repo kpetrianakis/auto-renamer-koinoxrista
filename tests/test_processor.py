@@ -77,6 +77,20 @@ def test_wrong_folder_renamed_with_warning(fixtures_dir, power_dir):
     assert "gas" in result.message
 
 
+def test_missing_field_renamed_with_warning(fixtures_dir, power_dir, monkeypatch):
+    from datetime import date
+
+    import renamer.processor as processor_mod
+    from renamer.model import Bill
+
+    monkeypatch.setattr(processor_mod, "parse_bill", lambda text: Bill("NRG", "revma", date(2026, 10, 9), 66, None))
+    src = put(fixtures_dir, "power_2026_10.pdf", power_dir, "x.pdf")
+    result = process_file(src)
+    assert result.status == "renamed"
+    assert result.target.name == "NRG revma 2026.10.09 66kwh euro .pdf"
+    assert "σύνολο λογαριασμού" in result.message
+
+
 def test_name_that_would_not_be_recognised_is_refused(fixtures_dir, power_dir, monkeypatch):
     # π.χ. αρνητικά kWh: το όνομα δεν θα αναγνωριζόταν ως επεξεργασμένο -> ατέρμονες μετονομασίες
     from datetime import date

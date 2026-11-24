@@ -71,7 +71,7 @@ def _log(result: Result) -> None:
         prefix = "[dry-run] " if result.status == "would_rename" else ""
         log.info("%sΜετονομασία: %s → %s", prefix, name, result.target.name)
         if result.message:
-            log.warning("Λάθος φάκελος: %s (%s)", result.target.name, result.message)
+            log.warning("Προσοχή: %s (%s)", result.target.name, result.message)
     elif result.status == "unrecognized":
         log.info("Μη αναγνωρισμένο PDF, μένει ως έχει: %s", name)
     elif result.status == "error":

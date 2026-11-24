@@ -34,10 +34,13 @@ def process_file(path: Path, *, dry_run: bool = False) -> Result:
     if bill is None:
         return Result("unrecognized", path)
 
-    message = ""
+    warnings = []
     expected_kind = FOLDER_KINDS.get(path.parent.name)
     if expected_kind and expected_kind != bill.kind:
-        message = f"λογαριασμός «{bill.kind}» στον φάκελο «{path.parent.name}»"
+        warnings.append(f"Λάθος φάκελος: λογαριασμός «{bill.kind}» στον φάκελο «{path.parent.name}»")
+    if bill.missing():
+        warnings.append(f"Κενά πεδία (δεν βρέθηκαν στο PDF): {', '.join(bill.missing())}")
+    message = "; ".join(warnings)
 
     filename = bill_filename(bill)
     if not is_processed(filename):  # αλλιώς ο watcher θα το ξαναμετονόμαζε επ' άπειρον

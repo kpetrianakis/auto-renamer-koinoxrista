@@ -27,6 +27,16 @@ def test_filename_negative_amount_is_still_processed():
     assert is_processed(name)
 
 
+def test_missing_fields_are_left_empty_and_still_processed():
+    name = bill_filename(bill(amount=None))
+    assert name == "NRG gas 2026.09.05 0kwh euro .pdf"
+    assert is_processed(name)
+    name = bill_filename(bill(issue_date=None, kwh=None))
+    assert name == "NRG gas  kwh euro 17.30.pdf"
+    assert is_processed(name)
+    assert is_processed("NRG gas  kwh euro  (2).pdf")
+
+
 def test_is_processed():
     assert is_processed("NRG gas 2026.10.16 0kwh euro 16.78.pdf")
     assert is_processed("NRG revma 2026.10.09 66kwh euro 82.12 (2).pdf")

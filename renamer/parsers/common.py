@@ -7,14 +7,13 @@ NUMBER = r"-?[\d.]+,\d{2}"
 
 
 class ParseError(Exception):
-    """Ο λογαριασμός αναγνωρίστηκε, αλλά λείπει κάποιο πεδίο."""
+    """Ο λογαριασμός αναγνωρίστηκε, αλλά δεν βρέθηκε κανένα από τα πεδία του."""
 
 
-def find(pattern: str, text: str, what: str) -> str:
+def find(pattern: str, text: str) -> str | None:
+    """Η πρώτη ομάδα του pattern, ή None αν δεν βρεθεί (το πεδίο μένει κενό)."""
     match = re.search(pattern, text, re.MULTILINE)
-    if not match:
-        raise ParseError(f"δεν βρέθηκε: {what}")
-    return match.group(1)
+    return match.group(1) if match else None
 
 
 def gr_number(value: str) -> Decimal:
