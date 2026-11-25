@@ -6,9 +6,13 @@ Watcher για Windows που μετονομάζει αυτόματα λογαρ
 ```
 NRG gas 2026.10.16 0kwh euro 16.78.pdf
 NRG revma 2026.10.09 66kwh euro 82.12.pdf
+DEI gas 2026.11.04 0kwh euro 245.00.pdf
 ```
 
-*Windows watcher that renames electricity/gas bill PDFs (Greek provider NRG)
+Υποστηριζόμενοι πάροχοι: **NRG** (αέριο, ρεύμα) και **ΔΕΗ** (αέριο). Λογαριασμοί
+ρεύματος ΔΕΗ δεν αναγνωρίζονται ακόμα και μένουν ως έχουν.
+
+*Windows watcher that renames electricity/gas bill PDFs (Greek providers NRG and DEH/ΔΕΗ)
 to `<provider> <type> <issue date> <kWh>kwh euro <amount>.pdf`.*
 
 ## Πώς δουλεύει

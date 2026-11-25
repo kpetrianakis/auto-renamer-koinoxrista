@@ -19,6 +19,7 @@ from renamer.pdftext import extract_text
         ("gas_estimate.pdf", Bill("NRG", "gas", date(2026, 4, 29), 4613, Decimal("349.79"))),
         ("power_2026_10.pdf", Bill("NRG", "revma", date(2026, 10, 9), 66, Decimal("82.12"))),
         ("power_2026_03.pdf", Bill("NRG", "revma", date(2026, 3, 13), 115, Decimal("95.15"))),
+        ("dei_gas_2026_11.pdf", Bill("DEI", "gas", date(2026, 11, 4), 1235, Decimal("245.00"))),
     ],
 )
 def test_parses_real_bills(fixtures_dir, fixture, expected):
@@ -30,7 +31,30 @@ def test_non_bill_is_not_recognised(not_a_bill):
 
 
 def test_unknown_provider_is_not_recognised():
-    assert parse_bill("ΔΕΗ\nΛογαριασμός Φυσικού Αερίου\n20/11/2026\n") is None
+    assert parse_bill("Protergia\nΛογαριασμός Φυσικού Αερίου\n20/11/2026\n") is None
+
+
+def test_dei_power_bill_is_not_recognised_yet():
+    # Μόνο το αέριο της ΔΕΗ υποστηρίζεται· ρεύμα ΔΕΗ μένει ανέγγιχτο ως να έρθει δείγμα
+    assert parse_bill("www.dei.gr\nΛΟΓΑΡΙΑΣΜΟΣ ΡΕΥΜΑΤΟΣ\nΗμ/νία Έκδοσης\n04/11/2026\n") is None
+
+
+def test_dei_gas_missing_field_is_left_empty():
+    text = "www.dei.gr\nΛΟΓΑΡΙΑΣΜΟΣ ΦΥΣΙΚΟΥ ΑΕΡΙΟΥ\nΚατανάλωση Φυσικού Αερίου\n0,00 kWh\nΗμ/νία Έκδοσης\n04/11/2026\n"
+    bill = parse_bill(text)
+    assert bill == Bill("DEI", "gas", date(2026, 11, 4), 0, None)
+    assert bill.missing() == ["σύνολο λογαριασμού"]
+
+
+def test_dei_gas_with_no_fields_raises():
+    with pytest.raises(ParseError, match="κανένα"):
+        parse_bill("www.dei.gr\nΛΟΓΑΡΙΑΣΜΟΣ ΦΥΣΙΚΟΥ ΑΕΡΙΟΥ\n")
+
+
+def test_dei_gas_negative_total():
+    # π.χ. επιστροφή εγγύησης στον τελικό λογαριασμό
+    text = "www.dei.gr\nΛΟΓΑΡΙΑΣΜΟΣ ΦΥΣΙΚΟΥ ΑΕΡΙΟΥ\nΣύνολο Τρέχοντος Λογαριασμού\n-55,00\n"
+    assert parse_bill(text).amount == Decimal("-55.00")
 
 
 def test_missing_field_is_left_empty():

@@ -2,7 +2,7 @@ import re
 from decimal import Decimal
 
 from ..model import Bill
-from .common import NUMBER, ParseError, find, gr_date, gr_number, round_kwh
+from .common import NUMBER, find, gr_number, make_bill
 
 GAS_TITLE = "Λογαριασμός Φυσικού Αερίου"  # «Εκκαθαριστικός», «Τελικός Εκκαθαριστικός» και «Έναντι»
 POWER_TITLE = "Λογαριασμός Χαμηλής Τάσης-Ηλεκτρικής Ενέργειας"
@@ -29,13 +29,4 @@ def parse(text: str) -> Bill:
         kwh = sum(Decimal(c) for c in charges) if charges else None
         amount = find(POWER_TOTAL, text)
 
-    bill = Bill(
-        "NRG",
-        kind,
-        gr_date(issue_date) if issue_date is not None else None,
-        round_kwh(kwh) if kwh is not None else None,
-        gr_number(amount) if amount is not None else None,
-    )
-    if len(bill.missing()) == 3:  # τίποτα χρήσιμο για το όνομα: καλύτερα να μείνει ως έχει
-        raise ParseError("δεν βρέθηκε κανένα πεδίο (ημερομηνία, kWh, σύνολο)")
-    return bill
+    return make_bill("NRG", kind, issue_date, kwh, amount)

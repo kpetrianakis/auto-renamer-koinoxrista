@@ -1,9 +1,9 @@
 from ..model import Bill
-from . import nrg
+from . import dei, nrg
 from .common import ParseError
 
-# Νέος πάροχος (π.χ. dei): module με matches()/parse() και προσθήκη εδώ.
-PARSERS = [nrg]
+# Νέος πάροχος: module με matches()/parse() και προσθήκη εδώ.
+PARSERS = [nrg, dei]
 
 __all__ = ["ParseError", "parse_bill"]
 
